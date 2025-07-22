@@ -1,1 +1,47 @@
 @import "tailwindcss";
+
+@keyframes auto-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.auto-scroll-container {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.auto-scroll-track {
+  display: flex;
+  width: fit-content;
+  animation: auto-scroll 40s linear infinite;
+}
+
+.auto-scroll-container:hover .auto-scroll-track {
+  animation-play-state: paused;
+}
+
+@keyframes scrollLoop {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); } /* Scroll halfway to loop seamlessly */
+}
+
+.auto-scroll-graphs {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.auto-scroll-track {
+  display: flex;
+  width: max-content;
+  animation: scrollLoop 40s linear infinite;
+}
+
+.auto-scroll-graphs:hover .auto-scroll-track {
+  animation-play-state: paused;
+}

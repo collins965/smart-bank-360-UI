@@ -1,268 +1,172 @@
 import { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import {
-  FiUser,
-  FiMail,
-  FiLock,
-  FiPhone,
-  FiMapPin,
-  FiCalendar,
-  FiInfo,
-  FiHash,
+  FiUser, FiMail, FiLock, FiPhone,
+  FiCalendar, FiMapPin, FiCreditCard, FiImage
 } from "react-icons/fi";
-
-// Reusable InputField Component
-const InputField = ({ name, type, label, icon: Icon, value, onChange, error }) => (
-  <div className="mb-4">
-    <label className="block text-gray-600 font-medium mb-1">{label}</label>
-    <div className="relative">
-      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-blue-500">
-        <Icon className="text-xl" />
-      </span>
-      <input
-        type={type}
-        name={name}
-        value={value}
-        onChange={onChange}
-        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
-      />
-    </div>
-    {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
-  </div>
-);
+import { toast, ToastContainer } from "react-toastify";
 
 const Register = () => {
   const navigate = useNavigate();
-
   const [formData, setFormData] = useState({
     username: "",
     email: "",
     password: "",
-    confirmPassword: "",
-    idNumber: "",
+    id_number: "",
     phone: "",
     address: "",
-    dateOfBirth: "",
+    date_of_birth: "",
     bio: "",
+    profile_image: null,
   });
 
-  const [errors, setErrors] = useState({});
-  const [successMessage, setSuccessMessage] = useState("");
+  const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-    setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
-    setSuccessMessage("");
-  };
+    const { name, value, files } = e.target;
 
-  const validate = () => {
-    const newErrors = {};
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match.";
+    if (name === "profile_image") {
+      const file = files[0];
+      setFormData({ ...formData, profile_image: file });
+      setPreview(URL.createObjectURL(file));
+    } else {
+      setFormData({ ...formData, [name]: value });
     }
-    return newErrors;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const validationErrors = validate();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
+    setLoading(true);
+
+    if (formData.phone.length > 15) {
+      toast.error("Phone number must be 15 characters or fewer");
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-
     try {
-      const response = await axios.post("http://127.0.0.1:8000/api/accounts/register/", {
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        id_number: formData.idNumber,
-        phone: formData.phone,
-        address: formData.address,
-        date_of_birth: formData.dateOfBirth,
-        bio: formData.bio,
+      const payload = new FormData();
+      payload.append("username", formData.username);
+      payload.append("email", formData.email);
+      payload.append("password", formData.password);
+      payload.append("profile.id_number", formData.id_number);
+      payload.append("profile.phone", formData.phone);
+      payload.append("profile.address", formData.address);
+      payload.append("profile.date_of_birth", formData.date_of_birth);
+      payload.append("profile.bio", formData.bio);
+
+      if (formData.profile_image) {
+        payload.append("profile.profile_image", formData.profile_image);
+      }
+
+      await axios.post("http://localhost:8000/api/accounts/register/", payload, {
+        headers: { "Content-Type": "multipart/form-data" }
       });
 
-      if (response.status === 201 || response.status === 200) {
-        setSuccessMessage("Registration successful! Redirecting...");
-        setTimeout(() => navigate("/login"), 2000);
-      }
-    } catch (error) {
-      if (error.response?.data) {
-        const serverErrors = error.response.data;
-        const formatted = {};
-        Object.keys(serverErrors).forEach((key) => {
-          formatted[key] = serverErrors[key][0];
-        });
-        setErrors(formatted);
-      } else {
-        setErrors({ general: "Something went wrong. Try again." });
-      }
+      toast.success("Registration successful!", {
+        onClose: () => navigate("/login"),
+        autoClose: 1500,
+      });
+
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.error || "Registration failed. Please check your inputs.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-blue-50 p-4">
-      <div className="bg-white w-full max-w-lg p-8 rounded-2xl shadow-lg">
-        <h2 className="text-2xl font-bold text-blue-700 mb-6 text-center">
+    <div className="min-h-screen bg-gradient-to-tr from-slate-100 to-blue-100 flex justify-center items-center p-4">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white p-8 shadow-2xl rounded-xl w-full max-w-2xl animate-fade-in"
+        encType="multipart/form-data"
+      >
+        <h2 className="text-3xl font-bold mb-6 text-center text-blue-600">
           Create Your Account
         </h2>
-        <form onSubmit={handleSubmit}>
-          <InputField
-            name="username"
-            type="text"
-            label="Username"
-            icon={FiUser}
-            value={formData.username}
-            onChange={handleChange}
-            error={errors.username}
-          />
-          <InputField
-            name="email"
-            type="email"
-            label="Email"
-            icon={FiMail}
-            value={formData.email}
-            onChange={handleChange}
-            error={errors.email}
-          />
-          <InputField
-            name="password"
-            type="password"
-            label="Password"
-            icon={FiLock}
-            value={formData.password}
-            onChange={handleChange}
-            error={errors.password}
-          />
-          <InputField
-            name="confirmPassword"
-            type="password"
-            label="Confirm Password"
-            icon={FiLock}
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            error={errors.confirmPassword}
-          />
-          <InputField
-            name="idNumber"
-            type="text"
-            label="ID Number"
-            icon={FiHash}
-            value={formData.idNumber}
-            onChange={handleChange}
-            error={errors.idNumber}
-          />
-          <InputField
-            name="phone"
-            type="text"
-            label="Phone Number"
-            icon={FiPhone}
-            value={formData.phone}
-            onChange={handleChange}
-            error={errors.phone}
-          />
-          <InputField
-            name="address"
-            type="text"
-            label="Address"
-            icon={FiMapPin}
-            value={formData.address}
-            onChange={handleChange}
-            error={errors.address}
-          />
-          <InputField
-            name="dateOfBirth"
-            type="date"
-            label="Date of Birth"
-            icon={FiCalendar}
-            value={formData.dateOfBirth}
-            onChange={handleChange}
-            error={errors.dateOfBirth}
-          />
 
-          {/* Bio */}
-          <div className="mb-4">
-            <label className="block text-gray-600 font-medium mb-1">Bio</label>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-start text-blue-500 pt-2">
-                <FiInfo className="text-xl" />
-              </span>
-              <textarea
-                name="bio"
-                value={formData.bio}
-                onChange={handleChange}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 resize-none h-24"
-              />
-            </div>
-            {errors.bio && <p className="text-sm text-red-500 mt-1">{errors.bio}</p>}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input name="username" placeholder="Username" icon={<FiUser />} value={formData.username} onChange={handleChange} />
+          <Input name="email" type="email" placeholder="Email" icon={<FiMail />} value={formData.email} onChange={handleChange} />
+          <Input name="password" type="password" placeholder="Password" icon={<FiLock />} value={formData.password} onChange={handleChange} />
+          <Input name="id_number" placeholder="ID Number" icon={<FiCreditCard />} value={formData.id_number} onChange={handleChange} />
+          <Input name="phone" placeholder="Phone" icon={<FiPhone />} value={formData.phone} onChange={handleChange} />
+          <Input name="address" placeholder="Address" icon={<FiMapPin />} value={formData.address} onChange={handleChange} />
+          <Input name="date_of_birth" type="date" placeholder="Date of Birth" icon={<FiCalendar />} value={formData.date_of_birth} onChange={handleChange} />
+
+          <div className="col-span-2">
+            <textarea
+              name="bio"
+              placeholder="Short Bio"
+              value={formData.bio}
+              onChange={handleChange}
+              rows={3}
+              className="w-full border px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
           </div>
 
-          {/* Feedback Messages */}
-          {errors.general && <p className="text-sm text-red-500 mb-3">{errors.general}</p>}
-          {successMessage && (
-            <p className="text-sm text-green-600 mb-3">{successMessage}</p>
-          )}
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full py-2 rounded-xl font-semibold transition ${
-              loading
-                ? "bg-blue-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700 text-white"
-            } flex items-center justify-center`}
-          >
-            {loading ? (
-              <div className="flex items-center gap-2">
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 018 8h-4l3 3 3-3h-4a8 8 0 01-8 8v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
-                  />
-                </svg>
-                <span>Registering...</span>
-              </div>
-            ) : (
-              "Register"
+          <div className="col-span-2">
+            <label className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+              <FiImage className="text-blue-600" />
+              Profile Picture (optional)
+            </label>
+            <input
+              type="file"
+              name="profile_image"
+              accept="image/*"
+              onChange={handleChange}
+              className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:border file:rounded file:text-sm file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200"
+            />
+            {preview && (
+              <img
+                src={preview}
+                alt="Preview"
+                className="mt-2 h-24 rounded shadow object-cover"
+              />
             )}
-          </button>
-        </form>
+          </div>
+        </div>
 
-        {/* Login Link */}
-        <p className="text-gray-500 mt-4 text-center text-sm">
+        <button
+          type="submit"
+          disabled={loading}
+          className="mt-6 w-full bg-blue-600 text-white py-3 rounded hover:bg-blue-700 transition duration-300 font-semibold"
+        >
+          {loading ? "Registering..." : "Register"}
+        </button>
+
+        <p className="text-sm text-center mt-4">
           Already have an account?{" "}
           <span
-            className="text-blue-600 cursor-pointer hover:underline"
+            className="text-blue-600 hover:underline cursor-pointer"
             onClick={() => navigate("/login")}
           >
             Login
           </span>
         </p>
-      </div>
+        <ToastContainer />
+      </form>
     </div>
   );
 };
+
+const Input = ({ name, type = "text", placeholder, value, onChange, icon }) => (
+  <div className="flex items-center border px-3 py-2 rounded focus-within:ring-2 focus-within:ring-blue-500 bg-white shadow-sm">
+    {icon}
+    <input
+      type={type}
+      name={name}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      className="ml-2 w-full focus:outline-none text-sm"
+      required
+    />
+  </div>
+);
 
 export default Register;
