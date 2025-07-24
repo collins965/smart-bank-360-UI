@@ -15,10 +15,11 @@ import Contact from "./pages/Contact";
 import Services from "./pages/Services";
 
 import HomeAuth from "./pages/HomeAuth";
-import Mpesa from "./pages/Mpesa"; // ✅ NEW: Mpesa page import
+import Mpesa from "./pages/Mpesa";
+import Wallet from "./pages/Wallet";
+import Profile from "./pages/Profile";
+import SendMoney from "./pages/SendMoney";
 
-// import Wallet from "./pages/Wallet";
-// import Profile from "./pages/Profile";
 
 const App = () => {
   const { isAuthenticated } = useAuth();
@@ -34,8 +35,9 @@ const App = () => {
             <>
               <Route path="/" element={<HomeAuth />} />
               <Route path="/mpesa" element={<Mpesa />} />
-              {/* <Route path="/wallet" element={<Wallet />} /> */}
-              {/* <Route path="/profile" element={<Profile />} /> */}
+              <Route path="/wallet" element={<Wallet />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/send-money" element={<SendMoney />} />
               <Route path="*" element={<Navigate to="/" />} />
             </>
           ) : (

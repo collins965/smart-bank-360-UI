@@ -40,3 +40,14 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Smooth dropdown transitions */
+.menu-enter {
+  opacity: 0;
+  transform: translateY(-10%);
+}
+.menu-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 200ms, transform 200ms;
+}

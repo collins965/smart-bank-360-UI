@@ -1,4 +1,4 @@
-// src/axiosInstance.js
+// src/api/axiosInstance.js
 import axios from "axios";
 
 const baseURL = "http://127.0.0.1:8000/api/";
@@ -12,7 +12,7 @@ const axiosInstance = axios.create({
   },
 });
 
-// Add access token to every request
+//  Add Authorization header to every request if token exists
 axiosInstance.interceptors.request.use(
   (config) => {
     const accessToken = localStorage.getItem("access");
@@ -24,39 +24,49 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Handle 401 errors and refresh token
+//  Handle 401 errors and refresh token if possible
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    const refreshToken = localStorage.getItem("refresh");
 
-    // Only refresh once
+    // Prevent infinite loop
     if (
       error.response?.status === 401 &&
-      refreshToken &&
       !originalRequest._retry
     ) {
       originalRequest._retry = true;
+
+      const refreshToken = localStorage.getItem("refresh");
+
+      if (!refreshToken) {
+        //  No refresh token, redirect to login
+        localStorage.removeItem("access");
+        localStorage.removeItem("refresh");
+        window.location.href = "/login";
+        return Promise.reject(error);
+      }
+
       try {
-        const response = await axios.post(`${baseURL}accounts/token/refresh/`, {
+        // 🔁 Attempt to refresh token
+        const response = await axios.post(`${baseURL}token/refresh/`, {
           refresh: refreshToken,
         });
 
         const newAccessToken = response.data.access;
         localStorage.setItem("access", newAccessToken);
 
-        // Set new token on headers
-        axiosInstance.defaults.headers.Authorization = `Bearer ${newAccessToken}`;
+        //  Retry original request with new access token
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
-        return axiosInstance(originalRequest); // retry
-      } catch (err) {
-        // Refresh failed, logout user
+        return axiosInstance(originalRequest);
+      } catch (refreshError) {
+        //  Refresh failed, log out user
+        console.error("Token refresh failed:", refreshError);
         localStorage.removeItem("access");
         localStorage.removeItem("refresh");
-        window.location.href = "/login"; // or show toast and redirect
-        return Promise.reject(err);
+        window.location.href = "/login";
+        return Promise.reject(refreshError);
       }
     }
 

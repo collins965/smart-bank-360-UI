@@ -1,122 +1,98 @@
+// src/pages/Mpesa.jsx
 import { useState } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const Mpesa = () => {
-  const { access, refresh, setAccess } = useAuth();
-  const navigate = useNavigate();
+  const { axiosInstance } = useAuth();
 
-  const [phone, setPhone] = useState("");
   const [amount, setAmount] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const refreshToken = async () => {
-    try {
-      const response = await axios.post("http://127.0.0.1:8000/api/token/refresh/", {
-        refresh,
-      });
-      const newAccess = response.data.access;
-      setAccess(newAccess);
-      localStorage.setItem("accessToken", newAccess);
-      return newAccess;
-    } catch (err) {
-      console.error("Token refresh failed:", err);
-      navigate("/login");
-      return null;
-    }
-  };
+  const [message, setMessage] = useState({ type: "", text: "" });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage("");
-    setError("");
     setLoading(true);
+    setMessage({ type: "", text: "" });
 
-    const makeRequest = async (token) => {
-      try {
-        const response = await axios.post(
-          "http://127.0.0.1:8000/api/mpesa/stk-push/",
-          {
-            phone_number: phone,
-            amount: amount,
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        setMessage("✅ STK Push sent successfully! Check your phone.");
-      } catch (err) {
-        if (err.response?.status === 401) {
-          const newToken = await refreshToken();
-          if (newToken) makeRequest(newToken);
-        } else {
-          console.error(err);
-          setError(err.response?.data?.detail || "❌ Transaction failed. Try again.");
-        }
-      } finally {
-        setLoading(false);
+    const trimmedPhone = phoneNumber.trim();
+    const formattedAmount = parseInt(amount, 10);
+
+    try {
+      const response = await axiosInstance.post("/api/mpesa/stk-push/", {
+        phone: trimmedPhone,
+        amount: formattedAmount,
+      });
+
+      console.log("📲 STK Push success:", response.data);
+      setMessage({ type: "success", text: "Payment initiated successfully." });
+    } catch (error) {
+      console.error(" STK Push error:", error);
+      if (error.response?.data) {
+        setMessage({
+          type: "error",
+          text: ` ${error.response.data.detail || "Error initiating payment."}`,
+        });
+      } else {
+        setMessage({
+          type: "error",
+          text: " Something went wrong. Please try again.",
+        });
       }
-    };
-
-    await makeRequest(access);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="max-w-md mx-auto mt-20 p-6 bg-white shadow-2xl rounded-xl">
-      <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
-        M-PESA STK Push
-      </h2>
-
-      {message && <div className="bg-green-100 text-green-700 p-3 rounded mb-4">{message}</div>}
-      {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>}
+    <div className="max-w-md mx-auto mt-12 p-6 bg-white border border-blue-200 rounded-xl shadow-xl">
+      <h2 className="text-3xl font-bold text-center text-blue-700 mb-6">M-Pesa Payment</h2>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">
-            Phone Number
-          </label>
+          <label className="block text-sm text-gray-700 mb-1">Phone Number</label>
           <input
-            type="tel"
+            type="text"
             placeholder="e.g. 254712345678"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            value={phoneNumber}
+            onChange={(e) => setPhoneNumber(e.target.value)}
             required
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">
-            Amount
-          </label>
+          <label className="block text-sm text-gray-700 mb-1">Amount</label>
           <input
             type="number"
-            placeholder="Enter amount"
+            placeholder="e.g. 100"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
             min="1"
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className={`w-full py-2 font-bold text-white rounded transition ${
-            loading
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-blue-600 hover:bg-blue-700"
+          className={`w-full py-3 rounded-lg text-white font-bold transition duration-300 ${
+            loading ? "bg-blue-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
           }`}
         >
-          {loading ? "Processing..." : "Pay Now"}
+          {loading ? "Processing..." : "Pay via M-Pesa"}
         </button>
+
+        {message.text && (
+          <p
+            className={`text-center mt-4 text-sm font-medium ${
+              message.type === "success" ? "text-green-600" : "text-red-600"
+            }`}
+          >
+            {message.text}
+          </p>
+        )}
       </form>
     </div>
   );

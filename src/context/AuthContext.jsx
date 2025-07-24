@@ -6,7 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import axios from "axios";
-import { jwtDecode } from "jwt-decode";
+import jwtDecode from "jwt-decode"; 
 import dayjs from "dayjs";
 
 const AuthContext = createContext();
@@ -20,48 +20,13 @@ export const AuthProvider = ({ children }) => {
     return access && refresh ? { access, refresh } : null;
   });
 
-  const [user, setUser] = useState(() => {
-    try {
-      return authTokens ? jwtDecode(authTokens.access) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [user, setUser] = useState(() =>
+    authTokens ? jwtDecode(authTokens.access) : null
+  );
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!authTokens);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const logoutUser = useCallback(() => {
-    localStorage.removeItem("access");
-    localStorage.removeItem("refresh");
-    setAuthTokens(null);
-    setUser(null);
-    setIsAuthenticated(false);
-  }, []);
-
-  const refreshAccessToken = useCallback(async () => {
-    try {
-      const response = await axios.post(`${baseURL}/api/token/refresh/`, {
-        refresh: authTokens?.refresh,
-      });
-      const newAccess = response.data.access;
-
-      const updatedTokens = {
-        access: newAccess,
-        refresh: authTokens.refresh,
-      };
-
-      localStorage.setItem("access", newAccess);
-      setAuthTokens(updatedTokens);
-      setUser(jwtDecode(newAccess));
-      return newAccess;
-    } catch (err) {
-      console.error("Token refresh failed:", err);
-      logoutUser();
-      return null;
-    }
-  }, [authTokens?.refresh, logoutUser]);
 
   const axiosInstance = axios.create({
     baseURL,
@@ -70,31 +35,39 @@ export const AuthProvider = ({ children }) => {
     },
   });
 
-  // Axios interceptor for automatic token refresh
-  useEffect(() => {
-    const interceptor = axiosInstance.interceptors.request.use(async (req) => {
-      if (!authTokens) return req;
+  axiosInstance.interceptors.request.use(async (req) => {
+    if (!authTokens) return req;
 
-      const decoded = jwtDecode(authTokens.access);
-      const isExpired = dayjs.unix(decoded.exp).diff(dayjs()) < 5000;
+    const decoded = jwtDecode(authTokens.access);
+    const isExpired = dayjs.unix(decoded.exp).diff(dayjs()) < 5000;
 
-      if (!isExpired) {
-        req.headers.Authorization = `Bearer ${authTokens.access}`;
-        return req;
-      }
-
-      const newAccess = await refreshAccessToken();
-      if (newAccess) {
-        req.headers.Authorization = `Bearer ${newAccess}`;
-      }
-
+    if (!isExpired) {
+      req.headers.Authorization = `Bearer ${authTokens.access}`;
       return req;
-    });
+    }
 
-    return () => {
-      axiosInstance.interceptors.request.eject(interceptor);
-    };
-  }, [authTokens, refreshAccessToken]);
+    try {
+      const response = await axios.post(`${baseURL}/api/token/refresh/`, {
+        refresh: authTokens.refresh,
+      });
+
+      const newAccess = response.data.access;
+      const updatedTokens = {
+        access: newAccess,
+        refresh: authTokens.refresh,
+      };
+
+      localStorage.setItem("access", newAccess);
+      setAuthTokens(updatedTokens);
+      setUser(jwtDecode(newAccess));
+      req.headers.Authorization = `Bearer ${newAccess}`;
+      return req;
+    } catch (err) {
+      console.error("Token refresh failed:", err);
+      logoutUser();
+      return Promise.reject(err);
+    }
+  });
 
   const loginUser = async ({ username, password }) => {
     try {
@@ -124,17 +97,34 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  useEffect(() => {
-    if (authTokens) {
-      try {
-        const decoded = jwtDecode(authTokens.access);
-        setUser(decoded);
-        setIsAuthenticated(true);
-      } catch {
-        logoutUser();
-      }
+  const logoutUser = useCallback(() => {
+    try {
+      localStorage.removeItem("access");
+      localStorage.removeItem("refresh");
+      setAuthTokens(null);
+      setUser(null);
+      setIsAuthenticated(false);
+    } catch (err) {
+      console.error("Logout failed:", err);
+      setError("Failed to log out.");
     }
-    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    const initAuth = () => {
+      if (authTokens) {
+        try {
+          const decoded = jwtDecode(authTokens.access);
+          setUser(decoded);
+          setIsAuthenticated(true);
+        } catch (err) {
+          console.warn("Invalid token — logging out.");
+          logoutUser();
+        }
+      }
+      setLoading(false);
+    };
+    initAuth();
   }, [authTokens, logoutUser]);
 
   return (
