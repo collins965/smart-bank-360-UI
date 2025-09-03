@@ -32,11 +32,7 @@ const Toast = ({ type, message, onClose }) => {
 
 const Login = () => {
   const navigate = useNavigate();
-  const {
-    setAuthTokens,
-    setUser,
-    setIsAuthenticated,
-  } = useAuth();
+  const { setAuthTokens, setUser, setIsAuthenticated } = useAuth();
 
   const [form, setForm] = useState({ username: "", password: "" });
   const [loading, setLoading] = useState(false);
@@ -57,7 +53,7 @@ const Login = () => {
       });
 
       const { access, refresh } = res.data;
-      const decoded = JSON.parse(atob(access.split('.')[1]));
+      const decoded = JSON.parse(atob(access.split(".")[1]));
 
       localStorage.setItem("access", access);
       localStorage.setItem("refresh", refresh);
@@ -134,8 +130,11 @@ const Login = () => {
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-2 text-white font-semibold rounded-lg transition-all duration-300 
-              ${loading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
+            className={`w-full py-2 text-white font-semibold rounded-lg transition-all duration-300 ${
+              loading
+                ? "bg-blue-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
           >
             {loading ? (
               <div className="flex items-center justify-center gap-2">

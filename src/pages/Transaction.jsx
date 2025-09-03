@@ -60,7 +60,7 @@ const Transaction = () => {
           name="start_date"
           value={filters.start_date}
           onChange={handleInputChange}
-          className="input"
+          className="border border-gray-300 px-3 py-2 rounded-md"
           placeholder="Start Date"
         />
         <input
@@ -68,7 +68,7 @@ const Transaction = () => {
           name="end_date"
           value={filters.end_date}
           onChange={handleInputChange}
-          className="input"
+          className="border border-gray-300 px-3 py-2 rounded-md"
           placeholder="End Date"
         />
         <input
@@ -76,7 +76,7 @@ const Transaction = () => {
           name="amount_min"
           value={filters.amount_min}
           onChange={handleInputChange}
-          className="input"
+          className="border border-gray-300 px-3 py-2 rounded-md"
           placeholder="Min Amount"
         />
         <input
@@ -84,14 +84,14 @@ const Transaction = () => {
           name="amount_max"
           value={filters.amount_max}
           onChange={handleInputChange}
-          className="input"
+          className="border border-gray-300 px-3 py-2 rounded-md"
           placeholder="Max Amount"
         />
         <select
           name="type"
           value={filters.type}
           onChange={handleInputChange}
-          className="input"
+          className="border border-gray-300 px-3 py-2 rounded-md"
         >
           <option value="">All Types</option>
           <option value="credit">Credit</option>
@@ -127,8 +127,10 @@ const Transaction = () => {
             </thead>
             <tbody>
               {transactions.map((tx) => (
-                <tr key={tx.id} className="border-t">
-                  <td className="px-4 py-2">{new Date(tx.timestamp).toLocaleString()}</td>
+                <tr key={tx.id} className="border-t hover:bg-gray-50">
+                  <td className="px-4 py-2">
+                    {new Date(tx.timestamp).toLocaleString()}
+                  </td>
                   <td className="px-4 py-2 capitalize">{tx.type}</td>
                   <td className="px-4 py-2">KSh {tx.amount.toLocaleString()}</td>
                   <td className="px-4 py-2">
@@ -151,7 +153,9 @@ const Transaction = () => {
             </tbody>
           </table>
         ) : (
-          <p className="text-center text-gray-500 py-6">No transactions found.</p>
+          <p className="text-center text-gray-500 py-6">
+            No transactions found.
+          </p>
         )}
       </div>
     </div>
